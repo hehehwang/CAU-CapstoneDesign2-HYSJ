@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "cau-capstonedesign2-hysj"
+version = "0.1.0"
+description = ""
+authors = ["heheHwang <hehehwang@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+opencv-python = "4.5.3.*"
+mediapipe = "^0.8.9"
+
+[tool.poetry.dev-dependencies]
+black = {version = "^21.9b0", allow-prereleases = true}
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
