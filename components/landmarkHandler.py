@@ -96,7 +96,7 @@ class MyLandmark(Vector3d):
         return self.__vis
 
     def __str__(self) -> str:
-        return f"{super().__str__()}: {self.__vis}"
+        return f"{super().__str__()}, {self.__vis}"
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -110,26 +110,29 @@ class HolisticLandmarks:
             __righthandLandmarks,
         ) = HolisticLandmarks.__preprocessLandmarks(MediapipeResult)
         self.__landmarks = {
-            "leftSide": {"pose": {}, "hand": {}},
-            "rightSide": {"pose": {}, "hand": {}},
+            "left": {"pose": {}, "hand": {}},
+            "right": {"pose": {}, "hand": {}},
         }
         for i, pwlm in enumerate(__poseWorldLandmarks):
             landmark = MyLandmark(pwlm.x, pwlm.y, pwlm.z, pwlm.visibility)
-            dest = self.__landmarks["leftSide" if i % 2 else "rightSide"]
+            dest = self.__landmarks["left" if i % 2 else "right"]
             dest["pose"][POSE_LANDMARK_ID_TO_NAME[i]] = landmark
 
         for i, hlm in enumerate(__lefthandLandmarks):
             landmark = MyLandmark(hlm.x, hlm.y)
-            dest = self.__landmarks["leftSide"]["hand"]
+            dest = self.__landmarks["left"]["hand"]
             dest[HAND_LANDMARK_ID_TO_NAME[i]] = landmark
 
         for i, hlm in enumerate(__righthandLandmarks):
             landmark = MyLandmark(hlm.x, hlm.y)
-            dest = self.__landmarks["rightSide"]["hand"]
+            dest = self.__landmarks["right"]["hand"]
             dest[HAND_LANDMARK_ID_TO_NAME[i]] = landmark
 
     @staticmethod
     def __preprocessLandmarks(MediapipeResults) -> tuple:
+        """
+        make values None-safe
+        """
         poseWorldLandmarks, lefthandLandmarks, righthandLandmarks = [], [], []
         if MediapipeResults.pose_world_landmarks:
             poseWorldLandmarks = MediapipeResults.pose_world_landmarks.landmark
@@ -140,8 +143,16 @@ class HolisticLandmarks:
         return poseWorldLandmarks, lefthandLandmarks, righthandLandmarks
 
     @property
-    def landmarks(self) -> dict:
+    def whole(self) -> dict:
         return self.__landmarks
+
+    @property
+    def left(self) -> dict:
+        return self.__landmarks["left"]
+
+    @property
+    def right(self) -> dict:
+        return self.__landmarks["right"]
 
     def __str__(self) -> str:
         from pprint import pformat
