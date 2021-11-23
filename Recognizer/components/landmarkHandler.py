@@ -4,8 +4,12 @@ import numpy as np
 from mediapipe.framework.formats.landmark_pb2 import Landmark
 from numpy.core.fromnumeric import prod
 
-from .CONST import (HAND_LANDMARK_ID_TO_NAME, HAND_LANDMARK_NAME_TO_ID,
-                    POSE_LANDMARK_ID_TO_NAME, POSE_LANDMARK_NAME_TO_ID)
+from .CONST import (
+    HAND_LANDMARK_ID_TO_NAME,
+    HAND_LANDMARK_NAME_TO_ID,
+    POSE_LANDMARK_ID_TO_NAME,
+    POSE_LANDMARK_NAME_TO_ID,
+)
 
 
 class Vector3d:
@@ -73,6 +77,12 @@ class MyLandmark(Vector3d):
         if len(args) == 4:
             __x, __y, __z, __vis = args
             super().__init__(__x, __y, __z)
+
+        elif len(args) == 3:
+            __x, __y, __z = args
+            super().__init__(__x, __y, __z)
+            __vis = 1.0
+
         elif len(args) == 2:
             __x, __y = args
             __vis = 1.0
