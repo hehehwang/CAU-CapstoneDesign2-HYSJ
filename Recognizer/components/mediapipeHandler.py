@@ -1,4 +1,4 @@
-from typing import Any, Iterator, List, Optional, Tuple, Union
+from typing import Any, Iterator, List, NamedTuple, Optional, Tuple, Union
 
 import cv2
 import mediapipe as mp
@@ -26,15 +26,33 @@ results.pose_world_landmarks.landmark[0]:
 """
 
 
+class MediapipeResult(NamedTuple):
+    image: np.ndarray
+    results: mp.Packet
+
+
 class Webcam:
     def __init__(self) -> None:
-        capture = cv2.VideoCapture(0)
+        from time import perf_counter
+
+        # pt = perf_counter()
+        capture = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        # npt = perf_counter()
+        # print(f"Webcam init took {npt - pt} seconds")
+        # pt = npt
         capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc("M", "J", "P", "G"))
-        # capture.set(cv2.CAP_PROP_FRAME_WIDTH, 10000)
-        # capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 10000)
+        # npt = perf_counter()
+        # print(f"Webcam set fourcc took {npt - pt} seconds")
+        # pt = npt
         capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        # npt = perf_counter()
+        # print(f"Webcam set resolution took {npt - pt} seconds")
+        # pt = npt
         capture.set(cv2.CAP_PROP_FPS, 60)
+        # npt = perf_counter()
+        # print(f"Webcam set fps took {npt - pt} seconds")
+
         self.__cap = capture
 
     @property
@@ -47,72 +65,8 @@ class Webcam:
 
         return frame
 
-
-class MP_Pose:
-    MEDIAPIPE_POSE = mp.solutions.pose
-    MP_DRAWING = mp.solutions.drawing_utils
-    MP_DRAWING_STYLES = mp.solutions.drawing_styles
-
-    def __init__(
-        self,
-        min_detection_confidence: float = 0.5,
-        min_tracking_confidence: float = 0.5,
-    ):
-        self.pose = MP_Pose.MEDIAPIPE_POSE.Pose(
-            min_detection_confidence=min_detection_confidence,
-            min_tracking_confidence=min_tracking_confidence,
-        )
-        capture = cv2.VideoCapture(0)
-        capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc("M", "J", "P", "G"))
-        capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-        capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-        capture.set(cv2.CAP_PROP_FPS, 60)
-
-        self.__cap = capture
-
-        self.__poseGen = self.__getPoseGenerator()
-
-    def __getFrame(self) -> ndarray:
-        while 1:
-            ret, frame = self.__cap.read()
-            if ret:
-                break
-        frame = cv2.flip(frame, 1)
-
-        return frame
-
-    def __getPoseGenerator(self) -> Iterator[mp.Packet]:
-        while 1:
-            frame = self.__getFrame()
-            image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            results = self.pose.process(image)
-
-            yield results
-
-    def __getMpResultFromFrame(self, frame: ndarray) -> mp.Packet:
-        image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = self.pose.process(image)
-
-        return results
-
-    def __getMarkedImageFromFrame(self, frame: ndarray, results: mp.Packet) -> ndarray:
-        image = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        MP_Pose.MP_DRAWING.draw_landmarks(
-            image,
-            results.pose_landmarks,
-            MP_Pose.MEDIAPIPE_POSE.POSE_CONNECTIONS,
-            landmark_drawing_spec=MP_Pose.MP_DRAWING_STYLES.get_default_pose_landmarks_style(),
-        )
-
-        return image
-
-    def getImageAndWorldLandmarks(self) -> Tuple[ndarray, List[Landmark]]:
-        frame = self.__getFrame()
-        results = self.__getMpResultFromFrame(frame)
-        landmarks = [l for l in results.pose_world_landmarks.landmark]
-        processedImage = self.__getMarkedImageFromFrame(frame, results)
-
-        return processedImage, landmarks
+    def __del__(self) -> None:
+        self.__cap.release()
 
 
 class MP_Holistic:
@@ -126,50 +80,44 @@ class MP_Holistic:
         min_detection_confidence: float = 0.5,
         min_tracking_confidence: float = 0.5,
     ) -> None:
+        # self.isImage, self.__camera, self.__inputImg = False, None, None
+        # if not imageDirectory:
+        #     self.__camera = Webcam()
+        # else:
+        #     self.__inputImg = cv2.imread(imageDirectory, cv2.IMREAD_COLOR)
+        #     self.isImage = True
 
-        self.isImage, self.__camera, self.__inputImg = False, None, None
-        if not imageDirectory:
-            self.__camera = Webcam()
-        else:
-            self.__inputImg = cv2.imread(imageDirectory, cv2.IMREAD_COLOR)
-            self.isImage = True
+        self.__nextFrame = self.__getFrameSource(imageDirectory)
         self.__holistic = MP_Holistic.MEDIAPIPE_HOLISTIC.Holistic(
-            static_image_mode=self.isImage,
+            # static_image_mode=self.isImage,
+            static_image_mode=False,
             min_detection_confidence=min_detection_confidence,
             min_tracking_confidence=min_tracking_confidence,
         )
 
-    def getMPResult(self) -> mp.Packet:
-        frame: Optional[ndarray] = None
-        if self.__camera:
-            frame = self.__camera.frame
-        else:
-            frame = self.__inputImg
-        results = self.__holistic.process(frame)
+    def __getFrameSource(self, imageDirectory: Optional[str]) -> Iterator[ndarray]:
+        __camera = None
+        while 1:
+            if imageDirectory:
+                yield cv2.imread(imageDirectory)
+            else:
+                if not __camera:
+                    __camera = Webcam()
+                yield __camera.frame
 
-        return results
+    def getMPResult(self) -> MediapipeResult:
+        frame = next(self.__nextFrame)
+        mpResults = self.__holistic.process(frame)
+        return MediapipeResult(frame, mpResults)
 
     def showResult(self) -> None:
         while 1:
-            bgrImg: Optional[ndarray] = None
-            if self.isImage:
-                bgrImg = self.__inputImg
-            elif self.__camera:
-                bgrImg = self.__camera.frame
-            else:
-                raise NotImplementedError
+            bgrImg: Optional[ndarray] = next(self.__nextFrame)
 
             rgbImg = cv2.cvtColor(bgrImg, cv2.COLOR_BGR2RGB)
             results = self.__holistic.process(rgbImg)
             rgbImg.flags.writeable = True
             bgrImg = cv2.cvtColor(rgbImg, cv2.COLOR_RGB2BGR)
-            # MP_Holistic.MP_DRAWING.draw_landmarks(
-            #     bgrImg,
-            #     results.face_landmarks,
-            #     MP_Holistic.MEDIAPIPE_HOLISTIC.FACEMESH_CONTOURS,
-            #     landmark_drawing_spec=None,
-            #     connection_drawing_spec=MP_Holistic.MP_DRAWING_STYLES.get_default_face_mesh_contours_style(),
-            # )
             MP_Holistic.MP_DRAWING.draw_landmarks(
                 bgrImg,
                 results.pose_landmarks,
@@ -190,8 +138,6 @@ class MP_Holistic:
                 landmark_drawing_spec=MP_Holistic.MP_DRAWING_STYLES.get_default_hand_landmarks_style(),
                 connection_drawing_spec=MP_Holistic.MP_DRAWING_STYLES.get_default_hand_connections_style(),
             )
-            # Flip the image horizontally for a selfie-view display.
-            # bgrImg = cv2.flip(bgrImg, 1)
             cv2.imshow("MediaPipe Holistic", bgrImg)
             if cv2.waitKey(2) & 0xFF == 27:
                 break
