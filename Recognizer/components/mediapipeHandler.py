@@ -7,6 +7,7 @@ from mediapipe.framework.formats.landmark_pb2 import Landmark
 from numpy import ndarray
 
 from .CONST import POSE_LANDMARK_ID_TO_NAME, POSE_LANDMARK_NAME_TO_ID
+from .landmarkHandler import HolisticLandmarks
 
 """
 results:
@@ -28,7 +29,7 @@ results.pose_world_landmarks.landmark[0]:
 
 class MediapipeResult(NamedTuple):
     image: np.ndarray
-    results: mp.Packet
+    results: HolisticLandmarks
 
 
 class Webcam:
@@ -108,7 +109,8 @@ class MP_Holistic:
     def getMPResult(self) -> MediapipeResult:
         frame = next(self.__nextFrame)
         mpResults = self.__holistic.process(frame)
-        return MediapipeResult(frame, mpResults)
+        hlms = HolisticLandmarks(mpResults)
+        return MediapipeResult(frame, hlms)
 
     def showResult(self) -> None:
         while 1:
