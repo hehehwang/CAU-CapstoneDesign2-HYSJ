@@ -1,7 +1,6 @@
 from typing import Union
 
 import numpy as np
-from multipledispatch import dispatch
 from numpy.core.fromnumeric import prod
 
 
