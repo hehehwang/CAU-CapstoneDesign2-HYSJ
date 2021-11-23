@@ -6,7 +6,7 @@ import numpy as np
 from mediapipe.framework.formats.landmark_pb2 import Landmark
 from numpy import ndarray
 
-from .poseLandmarks import LANDMARK_ID_TO_NAME, LANDMARK_NAME_TO_ID
+from .CONST import LANDMARK_ID_TO_NAME, LANDMARK_NAME_TO_ID
 
 """
 results:
