@@ -1,7 +1,7 @@
 import unittest
 
 import numpy as np
-from components.dataclass import Vector3d
+from components.landmarkHandler import Vector3d
 
 
 class CoordTest(unittest.TestCase):
