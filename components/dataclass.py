@@ -4,12 +4,8 @@ import numpy as np
 from mediapipe.framework.formats.landmark_pb2 import Landmark
 from numpy.core.fromnumeric import prod
 
-from .CONST import (
-    HAND_LANDMARK_ID_TO_NAME,
-    HAND_LANDMARK_NAME_TO_ID,
-    POSE_LANDMARK_ID_TO_NAME,
-    POSE_LANDMARK_NAME_TO_ID,
-)
+from .CONST import (HAND_LANDMARK_ID_TO_NAME, HAND_LANDMARK_NAME_TO_ID,
+                    POSE_LANDMARK_ID_TO_NAME, POSE_LANDMARK_NAME_TO_ID)
 
 
 class Vector3d:
@@ -77,8 +73,9 @@ class MyLandmark(Vector3d):
         if len(args) == 4:
             __x, __y, __z, __vis = args
             super().__init__(__x, __y, __z)
-        elif len(args) == 3:
-            __x, __y, __vis = args
+        elif len(args) == 2:
+            __x, __y = args
+            __vis = 1.0
             super().__init__(__x, __y, 0)
         else:
             raise ValueError(f"Invalid number of arguments: {len(args)}")
@@ -96,18 +93,12 @@ class MyLandmark(Vector3d):
 
 
 class HolisticLandmarks:
-    def __init__(self, MPResults):
-        __poseWorldLandmarks = MPResults.pose_world_landmarks.landmark
-        __lefthandLandmarks = (
-            MPResults.left_hand_landmarks.landmark
-            if MPResults.left_hand_landmarks
-            else []
-        )
-        __righthandLandmarks = (
-            MPResults.right_hand_landmarks.landmark
-            if MPResults.right_hand_landmarks
-            else []
-        )
+    def __init__(self, MediapipeResult):
+        (
+            __poseWorldLandmarks,
+            __lefthandLandmarks,
+            __righthandLandmarks,
+        ) = HolisticLandmarks.__preprocessLandmarks(MediapipeResult)
         self.__landmarks = {
             "leftSide": {"pose": {}, "hand": {}},
             "rightSide": {"pose": {}, "hand": {}},
@@ -115,21 +106,37 @@ class HolisticLandmarks:
         for i, pwlm in enumerate(__poseWorldLandmarks):
             landmark = MyLandmark(pwlm.x, pwlm.y, pwlm.z, pwlm.visibility)
             dest = self.__landmarks["leftSide" if i % 2 else "rightSide"]
-            dest["pose"][str(i)] = landmark
             dest["pose"][POSE_LANDMARK_ID_TO_NAME[i]] = landmark
 
         for i, hlm in enumerate(__lefthandLandmarks):
-            landmark = MyLandmark(hlm.x, hlm.y, hlm.visibility)
+            landmark = MyLandmark(hlm.x, hlm.y)
             dest = self.__landmarks["leftSide"]["hand"]
-            dest[str(i)] = landmark
             dest[HAND_LANDMARK_ID_TO_NAME[i]] = landmark
 
         for i, hlm in enumerate(__righthandLandmarks):
-            landmark = MyLandmark(hlm.x, hlm.y, hlm.visibility)
+            landmark = MyLandmark(hlm.x, hlm.y)
             dest = self.__landmarks["rightSide"]["hand"]
-            dest[str(i)] = landmark
             dest[HAND_LANDMARK_ID_TO_NAME[i]] = landmark
+
+    @staticmethod
+    def __preprocessLandmarks(MediapipeResults) -> tuple:
+        poseWorldLandmarks, lefthandLandmarks, righthandLandmarks = [], [], []
+        if MediapipeResults.pose_world_landmarks:
+            poseWorldLandmarks = MediapipeResults.pose_world_landmarks.landmark
+        if MediapipeResults.left_hand_landmarks:
+            lefthandLandmarks = MediapipeResults.left_hand_landmarks.landmark
+        if MediapipeResults.right_hand_landmarks:
+            righthandLandmarks = MediapipeResults.right_hand_landmarks.landmark
+        return poseWorldLandmarks, lefthandLandmarks, righthandLandmarks
 
     @property
     def landmarks(self) -> dict:
         return self.__landmarks
+
+    def __str__(self) -> str:
+        from pprint import pformat
+
+        return pformat(self.__landmarks)
+
+    def __repr__(self) -> str:
+        return self.__str__()
