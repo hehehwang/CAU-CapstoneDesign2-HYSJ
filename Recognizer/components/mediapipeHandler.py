@@ -98,11 +98,14 @@ class MP_Holistic:
 
     def __getFrameSource(self, imageDirectory: Optional[str]) -> Iterator[ndarray]:
         __camera = None
+        __img = None
         while 1:
             if imageDirectory:
-                yield cv2.imread(imageDirectory)
+                if __img is None:
+                    __img = cv2.imread(imageDirectory, cv2.IMREAD_COLOR)
+                yield __img
             else:
-                if not __camera:
+                if __camera is None:
                     __camera = Webcam()
                 yield __camera.frame
 

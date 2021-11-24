@@ -4,12 +4,8 @@ import numpy as np
 from mediapipe.framework.formats.landmark_pb2 import Landmark
 from numpy.core.fromnumeric import prod
 
-from .CONST import (
-    HAND_LANDMARK_ID_TO_NAME,
-    HAND_LANDMARK_NAME_TO_ID,
-    POSE_LANDMARK_ID_TO_NAME,
-    POSE_LANDMARK_NAME_TO_ID,
-)
+from .CONST import (HAND_LANDMARK_ID_TO_NAME, HAND_LANDMARK_NAME_TO_ID,
+                    POSE_LANDMARK_ID_TO_NAME, POSE_LANDMARK_NAME_TO_ID)
 
 
 class Vector3d:
@@ -108,30 +104,37 @@ class HolisticLandmarks:
             __poseWorldLandmarks,
             __lefthandLandmarks,
             __righthandLandmarks,
-        ) = HolisticLandmarks.__preprocessLandmarks(MediapipeResult)
+        ) = HolisticLandmarks.__splitLandmarks(MediapipeResult)
         self.__landmarks = {
-            "left": {"pose": {}, "hand": {}},
-            "right": {"pose": {}, "hand": {}},
+            "pose": {"left": {}, "right": {}},
+            "hand": {"left": {}, "right": {}},
         }
+
         for i, pwlm in enumerate(__poseWorldLandmarks):
             landmark = MyLandmark(pwlm.x, pwlm.y, pwlm.z, pwlm.visibility)
-            dest = self.__landmarks["left" if i % 2 else "right"]
-            dest["pose"][POSE_LANDMARK_ID_TO_NAME[i]] = landmark
+            dest = self.__landmarks["pose"]
+            name = POSE_LANDMARK_ID_TO_NAME[i]
+            if name.startswith("left"):
+                dest["left"][name[5:]] = landmark
+            elif name.startswith("right"):
+                dest["right"][name[6:]] = landmark
+            else:
+                pass
 
         for i, hlm in enumerate(__lefthandLandmarks):
             landmark = MyLandmark(hlm.x, hlm.y)
-            dest = self.__landmarks["left"]["hand"]
+            dest = self.__landmarks["hand"]["left"]
             dest[HAND_LANDMARK_ID_TO_NAME[i]] = landmark
 
         for i, hlm in enumerate(__righthandLandmarks):
             landmark = MyLandmark(hlm.x, hlm.y)
-            dest = self.__landmarks["right"]["hand"]
+            dest = self.__landmarks["hand"]["right"]
             dest[HAND_LANDMARK_ID_TO_NAME[i]] = landmark
 
     @staticmethod
-    def __preprocessLandmarks(MediapipeResults) -> tuple:
+    def __splitLandmarks(MediapipeResults) -> tuple:
         """
-        make values None-safe
+        split results to landmarks and make values None-safe
         """
         poseWorldLandmarks, lefthandLandmarks, righthandLandmarks = [], [], []
         if MediapipeResults.pose_world_landmarks:
@@ -147,12 +150,12 @@ class HolisticLandmarks:
         return self.__landmarks
 
     @property
-    def left(self) -> dict:
-        return self.__landmarks["left"]
+    def pose(self) -> dict:
+        return self.__landmarks["pose"]
 
     @property
-    def right(self) -> dict:
-        return self.__landmarks["right"]
+    def hand(self) -> dict:
+        return self.__landmarks["hand"]
 
     def __str__(self) -> str:
         from pprint import pformat
