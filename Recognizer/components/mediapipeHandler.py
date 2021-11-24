@@ -29,7 +29,9 @@ results.pose_world_landmarks.landmark[0]:
 
 class MediapipeResult(NamedTuple):
     image: np.ndarray
+    rawImage: np.ndarray
     results: HolisticLandmarks
+    rawResults: type
 
 
 class Webcam:
@@ -45,8 +47,8 @@ class Webcam:
         # npt = perf_counter()
         # print(f"Webcam set fourcc took {npt - pt} seconds")
         # pt = npt
-        capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+        capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
         # npt = perf_counter()
         # print(f"Webcam set resolution took {npt - pt} seconds")
         # pt = npt
@@ -110,39 +112,49 @@ class MP_Holistic:
                 yield __camera.frame
 
     def getMPResult(self) -> MediapipeResult:
-        frame = next(self.__nextFrame)
-        mpResults = self.__holistic.process(frame)
+        bgrImage = next(self.__nextFrame)
+
+        rgbImage = cv2.cvtColor(bgrImage, cv2.COLOR_BGR2RGB)
+        mpResults = self.__holistic.process(rgbImage)
         hlms = HolisticLandmarks(mpResults)
-        return MediapipeResult(frame, hlms)
+        processedBgrImage = self.__showResultsOnFrame(bgrImage.copy(), mpResults)
+        return MediapipeResult(
+            image=processedBgrImage,
+            rawImage=bgrImage,
+            results=hlms,
+            rawResults=mpResults,
+        )
+
+    def __showResultsOnFrame(self, bgrImage: ndarray, results) -> ndarray:
+        """
+        Draws the landmarks on the frame.
+        """
+
+        MP_Holistic.MP_DRAWING.draw_landmarks(
+            bgrImage,
+            results.pose_landmarks,
+            MP_Holistic.MEDIAPIPE_HOLISTIC.POSE_CONNECTIONS,
+            landmark_drawing_spec=MP_Holistic.MP_DRAWING_STYLES.get_default_pose_landmarks_style(),
+        )
+        MP_Holistic.MP_DRAWING.draw_landmarks(
+            bgrImage,
+            results.left_hand_landmarks,
+            MP_Holistic.MEDIAPIPE_HOLISTIC.HAND_CONNECTIONS,
+            landmark_drawing_spec=MP_Holistic.MP_DRAWING_STYLES.get_default_hand_landmarks_style(),
+            connection_drawing_spec=MP_Holistic.MP_DRAWING_STYLES.get_default_hand_connections_style(),
+        )
+        MP_Holistic.MP_DRAWING.draw_landmarks(
+            bgrImage,
+            results.right_hand_landmarks,
+            MP_Holistic.MEDIAPIPE_HOLISTIC.HAND_CONNECTIONS,
+            landmark_drawing_spec=MP_Holistic.MP_DRAWING_STYLES.get_default_hand_landmarks_style(),
+            connection_drawing_spec=MP_Holistic.MP_DRAWING_STYLES.get_default_hand_connections_style(),
+        )
+        return bgrImage
 
     def showResult(self) -> None:
         while 1:
-            bgrImg: Optional[ndarray] = next(self.__nextFrame)
-
-            rgbImg = cv2.cvtColor(bgrImg, cv2.COLOR_BGR2RGB)
-            results = self.__holistic.process(rgbImg)
-            rgbImg.flags.writeable = True
-            bgrImg = cv2.cvtColor(rgbImg, cv2.COLOR_RGB2BGR)
-            MP_Holistic.MP_DRAWING.draw_landmarks(
-                bgrImg,
-                results.pose_landmarks,
-                MP_Holistic.MEDIAPIPE_HOLISTIC.POSE_CONNECTIONS,
-                landmark_drawing_spec=MP_Holistic.MP_DRAWING_STYLES.get_default_pose_landmarks_style(),
-            )
-            MP_Holistic.MP_DRAWING.draw_landmarks(
-                bgrImg,
-                results.left_hand_landmarks,
-                MP_Holistic.MEDIAPIPE_HOLISTIC.HAND_CONNECTIONS,
-                landmark_drawing_spec=MP_Holistic.MP_DRAWING_STYLES.get_default_hand_landmarks_style(),
-                connection_drawing_spec=MP_Holistic.MP_DRAWING_STYLES.get_default_hand_connections_style(),
-            )
-            MP_Holistic.MP_DRAWING.draw_landmarks(
-                bgrImg,
-                results.right_hand_landmarks,
-                MP_Holistic.MEDIAPIPE_HOLISTIC.HAND_CONNECTIONS,
-                landmark_drawing_spec=MP_Holistic.MP_DRAWING_STYLES.get_default_hand_landmarks_style(),
-                connection_drawing_spec=MP_Holistic.MP_DRAWING_STYLES.get_default_hand_connections_style(),
-            )
-            cv2.imshow("MediaPipe Holistic", bgrImg)
+            r = self.getMPResult()
+            cv2.imshow("MediaPipe Holistic", r.image)
             if cv2.waitKey(2) & 0xFF == 27:
                 break
