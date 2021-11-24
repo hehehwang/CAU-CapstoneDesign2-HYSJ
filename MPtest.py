@@ -1,16 +1,27 @@
 from pprint import pprint
 
-from components.dataclass import HolisticLandmarks
-from components.mediapipeHandler import MP_Holistic
+import cv2
 
-mph = MP_Holistic("./sampleImg/sample1.jpg")
+from components.landmarkHandler import HolisticLandmarks, Vector3d
+from components.mediapipeHandler import MP_Holistic
+from components.myArm import MyArm
+
+# mph = MP_Holistic("./sampleImg/sample1.jpg")
 # mph = MP_Holistic()
 # mph.showResult()
-img, result = mph.getMPResult()
-while not (result.left_hand_landmarks or result.right_hand_landmarks):
-    img, result = mph.getMPResult()
-    print("retry..")
-# print(dir(result))
-# print(result.face_landmarks)
-hlm = HolisticLandmarks(result)
-pprint(hlm.landmarks)
+# mpr = mph.getMPResult()
+# img, result = mpr.image, mpr.results
+# while not (result.hand["left"] or result.hand["right"]):
+#     img, result = mph.getMPResult()
+#     print("retry..")
+# pprint(result)
+
+ma = MyArm(isRightArm=True, visThreshold=0.70)
+while 1:
+    r = ma.process()
+    cv2.imshow("MediaPipe Holistic", r.image)
+    # pprint(r.d)
+    pprint(r.theta)
+    print("=" * 20)
+    if cv2.waitKey(500) & 0xFF == 27:
+        break
