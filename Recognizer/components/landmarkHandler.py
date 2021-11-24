@@ -1,11 +1,15 @@
-from typing import Union
+from typing import Dict, Union
 
 import numpy as np
 from mediapipe.framework.formats.landmark_pb2 import Landmark
 from numpy.core.fromnumeric import prod
 
-from .CONST import (HAND_LANDMARK_ID_TO_NAME, HAND_LANDMARK_NAME_TO_ID,
-                    POSE_LANDMARK_ID_TO_NAME, POSE_LANDMARK_NAME_TO_ID)
+from .CONST import (
+    HAND_LANDMARK_ID_TO_NAME,
+    HAND_LANDMARK_NAME_TO_ID,
+    POSE_LANDMARK_ID_TO_NAME,
+    POSE_LANDMARK_NAME_TO_ID,
+)
 
 
 class Vector3d:
@@ -23,13 +27,13 @@ class Vector3d:
         self.__z = self.__np[2]
 
     def unitVector(self) -> "Vector3d":
-        ans = self.asNp / np.linalg.norm(self.asNp)
+        ans = self.np / np.linalg.norm(self.np)
         return Vector3d(ans[0], ans[1], ans[2])
 
     def angleBtw(self, other: "Vector3d") -> float:
         unitVectorA = self.unitVector()
         unitVectorB = other.unitVector()
-        product = np.dot(unitVectorA.asNp, unitVectorB.asNp)
+        product = np.dot(unitVectorA.np, unitVectorB.np)
         if product >= 1:
             return 0.0
         if product <= -1:
@@ -38,11 +42,11 @@ class Vector3d:
         return np.rad2deg(angleRad)
 
     def distBtw(self, other: "Vector3d") -> float:
-        return np.linalg.norm(self.asNp - other.asNp)
+        return np.linalg.norm(self.np - other.np)
 
     def __eq__(self, __o: object) -> bool:
         if isinstance(__o, Vector3d):
-            return np.isclose(self.asNp, __o.asNp).all()
+            return np.isclose(self.np, __o.np).all()
         return False
 
     @property
@@ -58,7 +62,7 @@ class Vector3d:
         return self.__z
 
     @property
-    def asNp(self) -> np.ndarray:
+    def np(self) -> np.ndarray:
         return self.__np
 
     def __str__(self) -> str:
@@ -146,15 +150,15 @@ class HolisticLandmarks:
         return poseWorldLandmarks, lefthandLandmarks, righthandLandmarks
 
     @property
-    def whole(self) -> dict:
+    def whole(self) -> Dict[str, Dict[str, Dict[str, MyLandmark]]]:
         return self.__landmarks
 
     @property
-    def pose(self) -> dict:
+    def pose(self) -> Dict[str, Dict[str, MyLandmark]]:
         return self.__landmarks["pose"]
 
     @property
-    def hand(self) -> dict:
+    def hand(self) -> Dict[str, Dict[str, MyLandmark]]:
         return self.__landmarks["hand"]
 
     def __str__(self) -> str:
