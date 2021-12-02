@@ -19,9 +19,27 @@ from components.myArm import MyArm
 ma = MyArm(isRightArm=True, visThreshold=0.70)
 while 1:
     r = ma.process()
-    cv2.imshow("MediaPipe Holistic", r.image)
+    image = cv2.putText(
+        r.image,
+        str(round(r.d[0], 2)),
+        (800, 200),
+        cv2.FONT_HERSHEY_PLAIN,
+        3,
+        (0, 0, 0),
+        2,
+    )
+    image = cv2.putText(
+        image,
+        ", ".join(map(lambda x: str(round(x, 2)), r.theta)),
+        (800, 100),
+        cv2.FONT_HERSHEY_PLAIN,
+        3,
+        (0, 0, 0),
+        2,
+    )
+    cv2.imshow("MediaPipe Holistic", image)
     # pprint(r.d)
-    pprint(r.theta)
-    print("=" * 20)
-    if cv2.waitKey(500) & 0xFF == 27:
+    # pprint(r.theta)
+    # print("=" * 20)
+    if cv2.waitKey(100) & 0xFF == 27:
         break
