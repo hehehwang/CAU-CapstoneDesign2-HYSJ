@@ -29,7 +29,7 @@ class Server:
         self.conn.sendall(msg.encode())
 
     def receive(self) -> str:
-        return self.conn.recv(4).decode()
+        return self.conn.recv(4096).decode()
 
     def __del__(self):
         self.conn.close()
