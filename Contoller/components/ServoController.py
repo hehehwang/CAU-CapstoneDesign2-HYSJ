@@ -14,8 +14,8 @@ class ServoController:
 
     def __init__(self, number_of_servo: int) -> None:
         self.__servos = [self.__getMG996R(i) for i in range(number_of_servo)]
-        self.initialize()
         self.__angles = [0 for i in range(number_of_servo)]
+        self.initialize()
 
     def test_servo(self, servo_number: int) -> None:
         for a in range(0, 181, 10):
@@ -47,5 +47,7 @@ class ServoController:
         return Servo(cls.pca.channels[ServoId], **cls.MG996R)
 
     def __del__(self) -> None:
+        self.initialize()
+        sleep(0.5)
         for s in self.__servos:
             s.angle = None
