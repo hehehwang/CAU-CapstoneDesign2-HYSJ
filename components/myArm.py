@@ -69,11 +69,10 @@ class MyArm:
                 pose["wrist"].np - np.array([0, 0, pose["wrist"].z])
             )
 
+            wristToHandTip = Vector3d(handTip.np - pose["wrist"].np)
+
             theta0 = Vector3d([1, 0, 0]).angleBtw(elbowToWrist_projected)
             theta1 = pose["wrist"].angleBtw(Vector3d(0, -1, 0))
-            wristToHandTip = Vector3d(handTip.np - pose["wrist"].np)
-            # print(f'{pose["wrist"]=}')
-            # print(f"{wristToHandTip=}")
             theta2 = pose["wrist"].angleBtw(wristToHandTip)
             d = hand["THUMB_TIP"].distBtw(hand["INDEX_FINGER_TIP"])
             return RecognizedArm(img, pose, hand, [d], [theta0, theta1, theta2])
